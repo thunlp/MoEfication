@@ -9,7 +9,7 @@ Source code for "[MoEfication: Transformer Feed-forward Layers are Mixtures of E
 * Python3
 * tqdm
 * numpy
-* sklearn
+* scikit-learn==0.20.1
 
 ## Expert Construction
 
