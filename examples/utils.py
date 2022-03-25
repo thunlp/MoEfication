@@ -19,26 +19,15 @@ def get_layer_num(filename):
 
     return max(enc_nums)+1, max(dec_nums)+1
 
-def load_ffn_weight(filename, layer, is_encoder=True):
-    if 'xlarge' in filename:
-        model_2 = torch.load(filename.replace('00', '01'), map_location='cpu')['module']
+def load_ffn_weight(filename, template, layer):
 
-    model = torch.load(filename, map_location='cpu')['module']
-    if is_encoder:
-        key = 'encoder.blocks.{}.ff.dense_relu_dense.wi.weight'.format(layer)
-    else:
-        key = 'decoder.blocks.{}.ff.dense_relu_dense.wi.weight'.format(layer)
-   
-    if 'xlarge' in filename:
-        return np.concatenate([model[key].numpy(), model_2[key].numpy()])
-    else: 
-        return model[key].numpy()
+    model = torch.load(filename, map_location='cpu')
+    key = template.format(layer)
 
-def load_hidden_states(folder, layer, is_encoder=True):
-    if is_encoder:
-        sub_folder = 'encoder_hiddens'
-    else:
-        sub_folder = 'decoder_hiddens'
+    return model[key].numpy()
+
+def load_hidden_states(folder, layer):
+    sub_folder = 'hiddens'
 
     target = os.path.join(folder, "{}_layer_{}".format(sub_folder, layer))
 
@@ -69,10 +58,10 @@ class ModelConfig:
 
 class LayerSplit:
 
-    def __init__(self, config : ModelConfig, layer=0, is_encoder=True):
+    def __init__(self, config : ModelConfig, template, layer=0):
         self.config = config
         self.layer = layer
-        self.is_encoder = is_encoder
+        self.template = template
 
     def split(self):
         pass
@@ -83,17 +72,14 @@ class LayerSplit:
         if not os.path.exists(save_folder):
             os.makedirs(save_folder)
 
-        if self.is_encoder:
-            filename = os.path.join(save_folder, 'encoder_layer_{}'.format(self.layer))
-        else:
-            filename = os.path.join(save_folder, 'decoder_layer_{}'.format(self.layer))
+        filename = os.path.join(save_folder, self.template.format(self.layer))
         torch.save(self.labels, filename)
 
     def cnt(self):
         print(Counter(self.labels))
 
     def load_param(self):
-        self.ffn_weight = load_ffn_weight(self.config.filename, self.layer, self.is_encoder)
+        self.ffn_weight = load_ffn_weight(self.config.filename, self.template, self.layer)
         self.neuron_num = self.ffn_weight.shape[0]
         self.split_size = self.neuron_num // self.config.split_num
         assert self.split_size * self.config.split_num == self.neuron_num
@@ -111,8 +97,8 @@ class RandomSplit(LayerSplit):
 
 class ParamSplit(LayerSplit):
     
-    def __init__(self, config: ModelConfig, layer=0, is_encoder=True):
-        super().__init__(config, layer=layer, is_encoder=is_encoder)
+    def __init__(self, config: ModelConfig, template, layer=0):
+        super().__init__(config, template=template, layer=layer)
         self.type = 'param_split'
 
     def split(self):
@@ -120,24 +106,20 @@ class ParamSplit(LayerSplit):
         self.load_param()
         ffn_weight_norm = sklearn.preprocessing.normalize(self.ffn_weight)
         
-        kmeans = EqualGroupsKMeans(n_clusters=self.config.split_num, n_jobs=-1, n_init=1, max_iter=20).fit(ffn_weight_norm, None)
+        kmeans = EqualGroupsKMeans(n_clusters=self.config.split_num, n_jobs=-1, n_init=1, max_iter=20, verbose=1).fit(ffn_weight_norm, None)
         
         self.labels = [x for x in kmeans.labels_]
 
 class BlockCenter:
 
-    def __init__(self, config, filename):
+    def __init__(self, config, template, filename):
         self.config = config
         self.filename = filename
         self.labels = torch.load(filename)
+        self.template = template
         
         basename = os.path.basename(filename)
         vecs = basename.split('_')
-        if vecs[0] == 'encoder':
-            self.is_encoder = True
-        else:
-            self.is_encoder = False
-        
         self.layer = int(vecs[-1])
 
     def cal_center(self):
@@ -224,12 +206,12 @@ class ParamCenter(BlockCenter):
         self.acc = np.mean(acc)
 
 class MLPCenter(BlockCenter):
-    def __init__(self, config, filename):
-        super().__init__(config, filename)
+    def __init__(self, config, template, filename):
+        super().__init__(config, template, filename)
         self.type = "input_compl"
     
     def cal_center(self):
-        ffn_weight = load_ffn_weight(self.config.filename, self.layer, self.is_encoder)
+        ffn_weight = load_ffn_weight(self.config.filename, self.template, self.layer)
         ffn_weight_norm_ = sklearn.preprocessing.normalize(ffn_weight)
         centers = []
         num_blocks = max(self.labels) + 1
@@ -245,8 +227,8 @@ class MLPCenter(BlockCenter):
         patterns = torch.Tensor(patterns).cuda().float().transpose(0, 1)
 
         hiddens = load_hidden_states(self.config.folder, self.layer, self.is_encoder)
-        hiddens = torch.cat(hiddens, 0).float()
-        hiddens = hiddens.view(-1, hiddens.shape[-1])
+        hideen_size = hiddens.shape[1]
+        hidden = torch.cat(hidden, 0).transpose(1, 2).reshape(-1, hideen_size)
 
         hiddens = hiddens / torch.norm(hiddens, dim=-1).unsqueeze(-1)
 

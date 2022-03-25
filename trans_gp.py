@@ -41,10 +41,14 @@ for k, v in d.items():
         labels[x] = k
 
 vec = os.path.basename(filename).split('_')
-t = vec[0]
-layer = vec[3]
+layer = vec[2]
 
-torch.save(labels, os.path.join(os.path.dirname(filename), 'gp_split', "{}_layer_{}".format(t, layer)))
+save_folder = os.path.join(os.path.dirname(filename), 'gp_split')
+
+if not os.path.exists(save_folder):
+    os.makedirs(save_folder)
+
+torch.save(labels, os.path.join(save_folder, "layer_{}".format(layer)))
 
 from collections import Counter
 

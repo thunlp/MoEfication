@@ -2,18 +2,17 @@ import utils
 import numpy as np
 import torch
 
-model_path = 'model_ckpt.bin' # path to the model checkpoint
+model_path = '/data/home/scv0540/zzy/gpt-j/example/results/gpt-j-relu-new/checkpoints/ckpt-16000.pt' # path to the model checkpoint
 
-res_path = 'moefication_exaple' # path to store the results of moefication
+res_path = '/data/home/scv0540/zzy/gpt-j/example/results/gpt-j-relu-new/' # path to store the results of moefication
 
-encoder_num, decoder_num = utils.get_layer_num(model_path)
+num_layer = 28
 
-config = utils.ModelConfig(model_path, res_path, split_num=128)
+config = utils.ModelConfig(model_path, res_path, split_num=512)
 
-for is_encoder, num_layer in zip([True, False], [encoder_num, decoder_num]):
-    for i in range(num_layer):
-        # Parameter Clustering Split
-        split = utils.ParamSplit(config, i, is_encoder=is_encoder)
-        split.split()
-        split.cnt()
-        split.save()
+for i in range(num_layer):
+    # Parameter Clustering Split
+    split = utils.ParamSplit(config, "dec_layers.{}.ff.fc_in_weight", i)
+    split.split()
+    split.cnt()
+    split.save()
