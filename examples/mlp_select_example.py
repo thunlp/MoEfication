@@ -1,18 +1,24 @@
+from tempfile import template
 import utils
 import numpy as np
 import torch
+import sys
+import argparse
 
-model_path = 'model_ckpt.bin' # path to the model checkpoint
+parser = argparse.ArgumentParser()
 
-res_path = 'moefication_exaple' # path to store the results of moefication
+parser.add_argument('--model_path', type=str, default='results/t5-base/ckpt.bin', help='path to the model checkpoint')
+parser.add_argument('--res_path', type=str, default='results/t5-base/', help='path to store the results of moefication')
+parser.add_argument('--num-layer', type=int, default=12, help='number of layers')
+parser.add_argument('--num-expert', type=int, default=96, help='number of experts')
+parser.add_argument('--templates', type=str, default='encoder.blocks.{}.ff.dense_relu_dense.wi.weight,decoder.blocks.{}.ff.dense_relu_dense.wi.weight', help='weight names of the first linear layer in each FFN (use comma to separate multiple templates)')
 
-encoder_num, decoder_num = utils.get_layer_num(model_path)
+args = parser.parse_args()
 
-config = utils.ModelConfig(model_path, res_path, split_num=128)
+config = utils.ModelConfig(args.model_path, args.res_path, split_num=args.num_expert)
 
-for is_encoder, num_layer in zip([True, False], [encoder_num, decoder_num]):
-    model_type = 'encoder' if is_encoder else 'decoder'
-    for i in range(num_layer):
-        center = utils.MLPCenter(config, '{}/param_split/{}_layer_{}'.format(res_path, model_type, i))
+templates = args.templates.split(',')
+for template in templates:
+    for i in range(args.num_layer):
+        center = utils.MLPCenter(config, template, '{}/gp_split/{}.model'.format(args.res_path, template.format(i)))
         center.cal_center()
-        center.save()
