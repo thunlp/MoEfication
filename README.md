@@ -23,7 +23,7 @@ gpmetis encoder.blocks.0.ff.dense_relu_dense.wi.weight num_expert
 ```
 where `num_expert` is the number of experts.
 
-Finally, we banlance the neurons in each expert.
+Finally, we balance the neurons in each expert.
 ```
 # num_expert=128
 python trans_gp.py encoder.blocks.0.ff.dense_relu_dense.wi.weight.part.128
