@@ -1,16 +1,24 @@
+from tempfile import template
 import utils
 import numpy as np
 import torch
+import sys
+import argparse
 
-model_path = '/data/home/scv0540/zzy/gpt-j/example/results/gpt-j-relu-new/checkpoints/ckpt-16000.pt' # path to the model checkpoint
+parser = argparse.ArgumentParser()
 
-res_path = '/data/home/scv0540/zzy/gpt-j/example/results/gpt-j-relu-new/' # path to store the results of moefication
+parser.add_argument('--model_path', type=str, default='results/t5-base/ckpt.bin', help='path to the model checkpoint')
+parser.add_argument('--res_path', type=str, default='results/t5-base/', help='path to store the results of moefication')
+parser.add_argument('--num-layer', type=int, default=12, help='number of layers')
+parser.add_argument('--num-expert', type=int, default=96, help='number of experts')
+parser.add_argument('--templates', type=str, default='encoder.blocks.{}.ff.dense_relu_dense.wi.weight,decoder.blocks.{}.ff.dense_relu_dense.wi.weight', help='weight names of the first linear layer in each FFN (use comma to separate multiple templates)')
 
-num_layer = 28
+args = parser.parse_args()
 
-config = utils.ModelConfig(model_path, res_path, split_num=512)
+config = utils.ModelConfig(args.model_path, args.res_path, split_num=args.num_expert)
 
-for i in range(num_layer):
-    center = utils.MLPCenter(config, "dec_layers.{}.ff.fc_in_weight", '{}/gp_split/layer_{}'.format(res_path, i))
-    center.cal_center()
-    center.save()
+templates = args.templates.split(',')
+for template in templates:
+    for i in range(args.num_layer):
+        center = utils.MLPCenter(config, template, '{}/gp_split/{}.model'.format(args.res_path, template.format(i)))
+        center.cal_center()

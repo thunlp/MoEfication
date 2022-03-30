@@ -226,9 +226,10 @@ class MLPCenter(BlockCenter):
             patterns.append(np.array(self.labels) == i)
         patterns = torch.Tensor(patterns).cuda().float().transpose(0, 1)
 
-        hiddens = load_hidden_states(self.config.folder, self.layer, self.is_encoder)
+        hiddens = load_hidden_states(self.config.folder, self.layer)
+        hiddens = torch.cat(hiddens, 0)
         hideen_size = hiddens.shape[1]
-        hidden = torch.cat(hidden, 0).transpose(1, 2).reshape(-1, hideen_size)
+        hiddens = hiddens.transpose(1, 2).reshape(-1, hideen_size)
 
         hiddens = hiddens / torch.norm(hiddens, dim=-1).unsqueeze(-1)
 
@@ -294,23 +295,26 @@ class MLPCenter(BlockCenter):
 
             acc = []
             
-            for i in range(hiddens.shape[0] // 10 * 9, hiddens.shape[0], 512):
+            # for i in range(hiddens.shape[0] // 10 * 9, hiddens.shape[0], 512):
+            # for i in range(0, hiddens.shape[0], 512):
+            for i in range(0, 512, 512):
                 with torch.no_grad():
-                    input = hiddens[i:i+512, :].cuda()
+                    input = hiddens[i:i+512, :].float().cuda()
                     acts = torch.relu((torch.matmul(input, ffn_weight))).float() # 512, 4096
+
                     scores = torch.matmul(acts, patterns) # 512, num_blocks, vary from 0 to 1
-                    mask, labels = torch.topk(scores, k=25, dim=-1)
+                    mask, labels = torch.topk(scores, k=int(num_blocks*0.2), dim=-1)
                     mask = mask > 0
                     
                     pred = model(input)
-                    pred = torch.topk(pred, k=25, dim=-1)[1]
+                    pred = torch.topk(pred, k=int(num_blocks*0.2), dim=-1)[1]
 
-                    for x, y, m in zip(labels, pred, mask):
+                    for x, m, s in zip(labels, mask, scores):
                         if m.sum().item() == 0:
                             continue
-                        x = set(x[m].cpu().view(-1).numpy())
-                        y = set(y.cpu().view(-1).numpy())
-                        acc.append(len(x & y) / m.sum().item())
+                        x = sum([s[xx] for xx in x.cpu()]).item()
+                        y = s.sum().item()
+                        acc.append( x / y)
             
             cur_acc = np.mean(acc)
             if cur_acc > save_acc[0]:
