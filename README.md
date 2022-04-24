@@ -5,11 +5,12 @@ Source code for "[MoEfication: Transformer Feed-forward Layers are Mixtures of E
 
 ## Reqirements:
 
-* torch>=1.6.0
+* torch==1.6.0
 * Python3
 * tqdm
-* numpy
+* numpy==1.21.1
 * scikit-learn==0.20.1
+* scipy==1.7.0
 
 ## Expert Construction
 
