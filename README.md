@@ -7,13 +7,13 @@ Source code for "[MoEfication: Transformer Feed-forward Layers are Mixtures of E
 
 * Python3.8
 * torch==1.6.0
-* numpy==1.21.1
-* scipy==1.7.0
+* transformers==4.20.1
 * tqdm
 * scikit-learn
 * k_means_constrained
 * datasets
-* transformers
+* numpy
+* scipy
 
 ## Expert Construction
 
@@ -38,6 +38,35 @@ python trans_gp.py encoder.blocks.0.ff.dense_relu_dense.wi.weight.part.128
 For similarity selection, we average the corresponding weight columns as the expert representation. The details of the implementation can be found in `similarity_select_example.py`.
 
 For MLP selection, We train a multi-layer perceptron (MLP), which takes the $\vx$ as input and predicts the sum of positive values in each expert. The details of the implementation can be found in `mlp_select_example.py`.
+
+## T5 Examples
+
+We provide an example of T5-base on SST-2 in `examples`, including groundtruth selection and MLP selection based on parameter clustering.
+
+First, you need to construct expert by 
+
+```
+python moefication/param_cluster_example.py
+```
+
+Then, you can directly evaluate groundtruth selection by 
+
+```
+python examples/t5-sst2-gt.py
+```
+
+To use MLP selection, you need to train the MLP by 
+
+```
+python examples/t5-sst2-inf.py
+python moefication/mlp_select_example.py 
+```
+
+And, you can evaluate the performance of MLP selection by 
+
+```
+python examples/t5-sst2-mlp.py
+```
 
 ## Cite
 
