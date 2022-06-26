@@ -8,6 +8,7 @@ import sklearn
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import MultiLabelBinarizer
 import numpy as np
+from k_means_constrained import KMeansConstrained
 
 def get_layer_num(filename):
     model = torch.load(filename, map_location='cpu')['module']
@@ -26,27 +27,9 @@ def load_ffn_weight(filename, template, layer):
 
     return model[key].numpy()
 
-def load_hidden_states(folder, layer):
-    sub_folder = 'hiddens'
-
-    target = os.path.join(folder, "{}_layer_{}".format(sub_folder, layer))
-
-    vecs = []
-    if os.path.exists(target):
-        vecs = torch.load(target)
-    else:
-        files = os.listdir(os.path.join(folder,sub_folder))
-        files = sorted(files, key=lambda x: int(x))
-        print(files)
-        if 'race' in target:
-            files = files[:len(files)//10]
-        if 'squad' in target:
-            files = files[:len(files)//5]
-        for filename in tqdm.tqdm(files):
-            path = os.path.join(folder,sub_folder, filename)
-            hiddens = torch.load(path, map_location='cpu')
-            vecs.append(hiddens[layer])
-        torch.save(vecs, target)
+def load_hidden_states(folder, filename):
+    target = os.path.join(folder, filename)
+    vecs = torch.load(target)
     return vecs
 
 class ModelConfig:
@@ -102,25 +85,22 @@ class ParamSplit(LayerSplit):
         self.type = 'param_split'
 
     def split(self):
-        from clustering.equal_groups import EqualGroupsKMeans
         self.load_param()
         ffn_weight_norm = sklearn.preprocessing.normalize(self.ffn_weight)
         
-        kmeans = EqualGroupsKMeans(n_clusters=self.config.split_num, n_jobs=-1, n_init=1, max_iter=20, verbose=1).fit(ffn_weight_norm, None)
+        kmeans = KMeansConstrained(n_clusters=self.config.split_num, size_min=self.split_size, size_max=self.split_size, random_state=0).fit(ffn_weight_norm, None)
         
         self.labels = [x for x in kmeans.labels_]
 
 class BlockCenter:
 
-    def __init__(self, config, template, filename):
+    def __init__(self, config, template, filename, layer):
         self.config = config
         self.filename = filename
         self.labels = torch.load(filename)
         self.template = template
         
-        basename = os.path.basename(filename)
-        vecs = basename.split('_')
-        self.layer = int(vecs[-1])
+        self.layer = layer
 
     def cal_center(self):
         pass
@@ -155,8 +135,8 @@ class RandomCenter(BlockCenter):
     
 class ParamCenter(BlockCenter):
 
-    def __init__(self, config, filename):
-        super().__init__(config, filename)
+    def __init__(self, config, filename, layer):
+        super().__init__(config, filename, layer)
         self.type = "param"
     
     def cal_center(self):
@@ -179,7 +159,7 @@ class ParamCenter(BlockCenter):
         patterns = torch.Tensor(patterns).cuda().float().transpose(0, 1) # 4096, num_blocks
 
         acc = []
-        hiddens = load_hidden_states(self.config.folder, self.layer, self.is_encoder)
+        hiddens = load_hidden_states(self.config.folder, self.template.format(self.layer))
         hiddens = torch.cat(hiddens, 0).float()
         hiddens = hiddens.view(-1, hiddens.shape[-1])
         hiddens = hiddens / torch.norm(hiddens, dim=-1).unsqueeze(-1)
@@ -206,8 +186,8 @@ class ParamCenter(BlockCenter):
         self.acc = np.mean(acc)
 
 class MLPCenter(BlockCenter):
-    def __init__(self, config, template, filename):
-        super().__init__(config, template, filename)
+    def __init__(self, config, template, filename, layer):
+        super().__init__(config, template, filename, layer)
         self.type = "input_compl"
     
     def cal_center(self):
@@ -226,10 +206,7 @@ class MLPCenter(BlockCenter):
             patterns.append(np.array(self.labels) == i)
         patterns = torch.Tensor(patterns).cuda().float().transpose(0, 1)
 
-        hiddens = load_hidden_states(self.config.folder, self.layer)
-        hiddens = torch.cat(hiddens, 0)
-        hideen_size = hiddens.shape[1]
-        hiddens = hiddens.transpose(1, 2).reshape(-1, hideen_size)
+        hiddens = load_hidden_states(self.config.folder, self.template.format(self.layer))
 
         hiddens = hiddens / torch.norm(hiddens, dim=-1).unsqueeze(-1)
 
@@ -249,10 +226,6 @@ class MLPCenter(BlockCenter):
         model.apply(weights_init)
         
         model.cuda()
-
-        #for name, param in model.named_parameters():
-        #    if param.shape[-1] == hiddens.shape[-1]:
-        #        param.requires_grad = False
 
         optim = torch.optim.Adam(model.parameters(), lr=0.01)
 
@@ -275,15 +248,10 @@ class MLPCenter(BlockCenter):
             for i in pbar:
                 model.zero_grad()
 
-                input = train_hiddens[i:i+512, :].float().cuda()
+                input = train_hiddens[i:i+512, :].float().clone().detach().cuda()
                 with torch.no_grad():
-                    acts = torch.relu((torch.matmul(input, ffn_weight))).float() # 512, 4096
+                    acts = torch.relu((torch.matmul(input, ffn_weight))).float()
                     scores = torch.matmul(acts, patterns)
-                    #if pos_max is None:
-                    #    pos_max = torch.max(scores).item()
-                    #else:
-                    #    pos_max = max([torch.max(scores).item(), pos_max])
-                    #scores /= pos_max # 512, num_blocks, vary from 0 to 1
                     scores /= scores.max()
                 pred = model(input)
                 loss = loss_func(pred.view(-1), scores.view(-1))
@@ -295,9 +263,7 @@ class MLPCenter(BlockCenter):
 
             acc = []
             
-            # for i in range(hiddens.shape[0] // 10 * 9, hiddens.shape[0], 512):
-            # for i in range(0, hiddens.shape[0], 512):
-            for i in range(0, 512, 512):
+            for i in range(hiddens.shape[0] // 10 * 9, hiddens.shape[0], 512):
                 with torch.no_grad():
                     input = hiddens[i:i+512, :].float().cuda()
                     acts = torch.relu((torch.matmul(input, ffn_weight))).float() # 512, 4096
@@ -309,7 +275,7 @@ class MLPCenter(BlockCenter):
                     pred = model(input)
                     pred = torch.topk(pred, k=int(num_blocks*0.2), dim=-1)[1]
 
-                    for x, m, s in zip(labels, mask, scores):
+                    for x, m, s in zip(pred, mask, scores):
                         if m.sum().item() == 0:
                             continue
                         x = sum([s[xx] for xx in x.cpu()]).item()
