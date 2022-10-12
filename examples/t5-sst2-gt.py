@@ -6,7 +6,8 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration, T5Config
 import numpy as np
 from transformers.models.t5.modeling_t5 import T5DenseActDense
 
-k=96
+# the number of selected experts for each token
+k=20
 
 tokenizer = T5Tokenizer.from_pretrained('t5-base')
 config = T5Config.from_pretrained('t5-base')
