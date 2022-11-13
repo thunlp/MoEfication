@@ -1,9 +1,11 @@
 from ast import arg
 from re import template
+import os
 import utils
 import numpy as np
 import torch
 import argparse
+import tqdm
 
 parser = argparse.ArgumentParser()
 
@@ -14,6 +16,8 @@ parser.add_argument('--num-expert', type=int, default=96, help='number of expert
 parser.add_argument('--templates', type=str, default='encoder.block.{}.layer.1.DenseReluDense.wi.weight,decoder.block.{}.layer.2.DenseReluDense.wi.weight', help='weight names of the first linear layer in each FFN (use comma to separate multiple templates)')
 
 args = parser.parse_args()
+if not os.path.exists(args.res_path):
+    os.makedirs(args.res_path)
 
 config = utils.ModelConfig(args.model_path, args.res_path, split_num=args.num_expert)
 

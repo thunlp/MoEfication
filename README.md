@@ -68,6 +68,28 @@ And, you can evaluate the performance of MLP selection by
 python examples/t5-sst2-mlp.py
 ```
 
+## BERT Examples
+
+We also provide an example of BERT-large on SST-2 in `examples`. The checkpoint of ReLU-based BERT is available [here](https://cloud.tsinghua.edu.cn/f/cce7d1c994904f0f81bd/?dl=1). 
+
+You need to first download it and fine-tune it on SST-2 by 
+
+```
+python examples/bert-sst2-training.py
+```
+
+Then, you need to construct expert by 
+
+```
+python moefication/param_cluster_example.py --model_path bert-sst2-bsz32/epoch_1.bin --res_path results/bert-sst2 --num-layer 24 --num-expert 128 --templates bert.encoder.layer.{}.intermediate.dense.weight
+```
+
+you can evaluate groundtruth selection by 
+
+```
+python examples/bert-sst2-gt.py
+```
+
 ## Cite
 
 If you use the code, please cite this paper:
