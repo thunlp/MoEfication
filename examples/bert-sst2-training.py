@@ -9,7 +9,8 @@ import numpy as np
 batch_size = 32
 gradient_accumulation_steps = 4
 mini_batch_size = batch_size // gradient_accumulation_steps
-folder = 'bert-sst2-bsz32-new'
+folder = "bert-sst2-bsz32"
+ckpt_path = "relu-bert-large-uncased.bin"
 
 if not os.path.exists(folder):
     os.makedirs(folder)
@@ -25,7 +26,7 @@ model = BertForSequenceClassification(config=config)
 for x in model.bert.encoder.layer:
     x.intermediate.dense.bias = None
 
-res = model.load_state_dict(torch.load('relu-bert-large-uncased-200.bin', map_location='cpu'), strict=False)
+res = model.load_state_dict(torch.load(ckpt_path, map_location='cpu'), strict=False)
 print(res)
 model.cuda()
 

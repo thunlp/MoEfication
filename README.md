@@ -90,6 +90,10 @@ you can evaluate groundtruth selection by
 python examples/bert-sst2-gt.py
 ```
 
+### Tips for Training ReLU-based BERT
+
+We use the pre-training script from [NVIDIA](https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/LanguageModeling/BERT). The only difference is that we replace the activation function with ReLU and set the bias of the intermediate layer to None. We initialize the model with the checkpoint of [BERT-Large-Uncased](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/dle/models/bert_large_pyt_ckpt_mode-pretrain) provided by NVIDIA. In the experiments, we found that training around 200 steps is enough to get a good performance.
+
 ## Cite
 
 If you use the code, please cite this paper:
