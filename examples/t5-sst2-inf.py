@@ -64,7 +64,7 @@ for idx, instance in enumerate(tqdm.tqdm(sst2_train)):
 
     pred.append(int(output.logits[:, 0, 1465].item() > output.logits[:, 0, 2841].item()) == instance['label'])
 
-print("Acc", sum(pred) * 1. / len(pred), 'k', k)
+print("Acc", sum(pred) * 1. / len(pred))
 
 for k, v in res.items():
     v = [x.reshape(-1, x.shape[-1]) for x in v]
