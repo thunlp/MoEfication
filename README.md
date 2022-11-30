@@ -14,6 +14,9 @@ Source code for "[MoEfication: Transformer Feed-forward Layers are Mixtures of E
 * datasets
 * numpy
 * scipy
+* fastmoe
+
+Recommended command for installing fastmoe: first clone the repo, then run `USE_NCCL=0 python setup.py install`
 
 ## Expert Construction
 
