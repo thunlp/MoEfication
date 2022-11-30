@@ -3,6 +3,8 @@
 
 Source code for "[MoEfication: Transformer Feed-forward Layers are Mixtures of Experts](https://arxiv.org/abs/2110.01786)"
 
+**Update (2022/11/30):** We provide a simple example of using fastmoe for efficient MoE implementation in the branch [fastmoe](https://github.com/thunlp/MoEfication/tree/fastmoe). We will provide how to transform a MoEfied checkpoint to a fastmoe checkpoint soon. Keep tuned!
+
 ## Reqirements:
 
 * Python3.8
