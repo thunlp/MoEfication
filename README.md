@@ -48,7 +48,7 @@ We provide an example of T5-base on SST-2 in `examples`, including groundtruth s
 First, you need to construct expert by 
 
 ```
-python moefication/param_cluster_example.py
+python examples/t5_cluster_example.py
 ```
 
 Then, you can directly evaluate groundtruth selection by 
@@ -61,7 +61,7 @@ To use MLP selection, you need to train the MLP by
 
 ```
 python examples/t5-sst2-inf.py
-python moefication/mlp_select_example.py 
+python examples/t5_select_example.py 
 ```
 
 And, you can evaluate the performance of MLP selection by 
