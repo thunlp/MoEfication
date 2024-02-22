@@ -66,6 +66,12 @@ for idx, instance in enumerate(tqdm.tqdm(sst2_train)):
 
 print("Acc", sum(pred) * 1. / len(pred))
 
+try:
+    os.makedirs('results/t5-base')
+except FileExistsError:
+    pass
+    
+
 for k, v in res.items():
     v = [x.reshape(-1, x.shape[-1]) for x in v]
     v = torch.cat(v, dim=0)
