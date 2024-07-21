@@ -1,7 +1,9 @@
 
 # MoEfication
 
-Source code for "[MoEfication: Transformer Feed-forward Layers are Mixtures of Experts](https://arxiv.org/abs/2110.01786)"
+Source code for "[MoEfication: Transformer Feed-forward Layers are Mixtures of Experts](https://arxiv.org/abs/2110.01786)" and "[Exploring the Benefit of Activation Sparsity in Pre-training](https://openreview.net/forum?id=KfXXPCcobh)"
+
+**Important Update (2024/07/21)**: In addition to the original work, this repository now contains [subsequent research](https://openreview.net/forum?id=KfXXPCcobh) that provides a **faster and better parameter clustering method** by incorporating GPUs and initialization from previous results. We encourage users to use the new contributions when considering **MoEfication during training**. This method is detailed in the [faster_moefication](./faster_moefication/README.md).
 
 **Update (2022/11/30):** We provide a simple example of using fastmoe for efficient MoE implementation in the branch [fastmoe](https://github.com/thunlp/MoEfication/tree/fastmoe). We will provide how to transform a MoEfied checkpoint to a fastmoe checkpoint soon. Keep tuned!
 
@@ -101,6 +103,14 @@ We use the pre-training script from [NVIDIA](https://github.com/NVIDIA/DeepLearn
 If you use the code, please cite this paper:
 
 ```
+@inproceedings{
+  zhang2024exploring,
+  title={Exploring the Benefit of Activation Sparsity in Pre-training},
+  author={Zhengyan Zhang and Chaojun Xiao and Qiujieli Qin and Yankai Lin and Zhiyuan Zeng and Xu Han and Zhiyuan Liu and Ruobing Xie and Maosong Sun and Jie Zhou},
+  booktitle={Proceedings of ICML},
+  year={2024},
+}
+
 @inproceedings{zhang2022moefication,
   title={{MoEfication}: Transformer Feed-forward Layers are Mixtures of Experts},
   author={Zhang, Zhengyan and Lin, Yankai and Liu, Zhiyuan and Li, Peng and Sun, Maosong and Zhou, Jie},
